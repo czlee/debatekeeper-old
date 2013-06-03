@@ -21,7 +21,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
+import net.czlee.debatekeeper.AlertManager.FlashScreenListener;
 import net.czlee.debatekeeper.AlertManager.FlashScreenMode;
 
 import org.xml.sax.SAXException;
@@ -81,6 +84,7 @@ public class DebatingActivity extends Activity {
     private RelativeLayout[] mDebateTimerDisplays;
     private int              mCurrentDebateTimerDisplayIndex = 0;
     private boolean          mIsEditingTime = false;
+    private final Semaphore  mFlashScreenSemaphore = new Semaphore(1, true);
     private final int        mNormalBackgroundColour = 0;
 
     private Button mLeftControlButton;
@@ -160,6 +164,15 @@ public class DebatingActivity extends Activity {
         }
 
         @Override
+        public boolean begin() {
+            try {
+                return mFlashScreenSemaphore.tryAcquire(2, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                return false; // Don't bother with the flash screen any more
+            }
+        }
+
+        @Override
         public void flashScreenOn(int colour) {
 
             // First, if the whole screen is coloured, remove the colouring.
@@ -167,12 +180,12 @@ public class DebatingActivity extends Activity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    if (mBackgroundColourArea == BackgroundColourArea.WHOLE_SCREEN)
+                    if (mBackgroundColourArea == BackgroundColourArea.WHOLE_SCREEN) {
+                        // Log.v(this.getClass().getSimpleName(), "removing background colour on " + Thread.currentThread().toString());
                         mDebateTimerDisplays[mCurrentDebateTimerDisplayIndex].setBackgroundColor(0);
-
+                    }
                 }
             });
-
             flashScreen(colour);
         }
 
@@ -183,6 +196,7 @@ public class DebatingActivity extends Activity {
 
         @Override
         public void done() {
+            mFlashScreenSemaphore.release();
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -405,7 +419,7 @@ public class DebatingActivity extends Activity {
     }
 
     //******************************************************************************************
-    // Public and protected methods
+    // Public methods
     //******************************************************************************************
 
     @Override
@@ -487,6 +501,10 @@ public class DebatingActivity extends Activity {
 
         return super.onPrepareOptionsMenu(menu);
     }
+
+    //******************************************************************************************
+    // Protected methods
+    //******************************************************************************************
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -771,7 +789,7 @@ public class DebatingActivity extends Activity {
             mDebateManager.setPrepTimeEnabled(prepTimerEnabled);
             applyPrepTimeBells();
         } else {
-            Log.w(this.getClass().getSimpleName(), "applyPreferences: Couldn't restore overtime bells, mDebateManager doesn't yet exist");
+            Log.i(this.getClass().getSimpleName(), "applyPreferences: Couldn't restore overtime bells, mDebateManager doesn't yet exist");
         }
 
         if (mBinder != null) {
@@ -792,7 +810,7 @@ public class DebatingActivity extends Activity {
 
             Log.v(this.getClass().getSimpleName(), "applyPreferences: successfully applied");
         } else {
-            Log.w(this.getClass().getSimpleName(), "applyPreferences: Couldn't restore AlertManager preferences; mBinder doesn't yet exist");
+            Log.i(this.getClass().getSimpleName(), "applyPreferences: Couldn't restore AlertManager preferences; mBinder doesn't yet exist");
         }
 
     }
@@ -817,7 +835,7 @@ public class DebatingActivity extends Activity {
      * The message of the exception will be human-readable and can be displayed in a dialogue box.
      */
     private DebateFormat buildDebateFromXml(String filename) throws FatalXmlError {
-        DebateFormatBuilderFromXml dfbfx = new DebateFormatBuilderFromXml(this);
+        DebateFormatBuilderFromXmlForSchema1 dfbfx = new DebateFormatBuilderFromXmlForSchema1(this);
         InputStream is = null;
         DebateFormat df;
 
@@ -870,14 +888,24 @@ public class DebatingActivity extends Activity {
         currentTime = subtractFromSpeechLengthIfCountingDown(currentTime);
 
         // Limit to the allowable time range
-        if (currentTime < 0) currentTime = 0;
-        if (currentTime >= 24 * 60) currentTime = 24 * 60 - 1;
+        if (currentTime < 0) {
+            currentTime = 0;
+            Toast.makeText(this, R.string.mainScreen_toast_editTextDiscardChangesInfo_limitedBelow, Toast.LENGTH_LONG).show();
+        }
+        if (currentTime >= 24 * 60) {
+            currentTime = 24 * 60 - 1;
+            Toast.makeText(this, R.string.mainScreen_toast_editTextDiscardChangesInfo_limitedAbove, Toast.LENGTH_LONG).show();
+        }
 
         // We're using this in hours and minutes, not minutes and seconds
         currentTimePicker.setCurrentHour((int) (currentTime / 60));
         currentTimePicker.setCurrentMinute((int) (currentTime % 60));
 
         updateGui();
+
+        // If we had to limit the time, display a helpful/apologetic message informing the user
+        // of how to discard their changes, since they can't recover the time.
+
     }
 
     /**
@@ -1327,7 +1355,11 @@ public class DebatingActivity extends Activity {
                 periodDescriptionText.setBackgroundColor(backgroundColour);
                 break;
             case WHOLE_SCREEN:
-                v.setBackgroundColor(backgroundColour);
+                // Don't do the whole screen if there is a flash screen in progress
+                if (mFlashScreenSemaphore.tryAcquire()) {
+                    v.setBackgroundColor(backgroundColour);
+                    mFlashScreenSemaphore.release();
+                }
             }
 
             long currentSpeechTime = mDebateManager.getCurrentSpeechTime();
@@ -1351,7 +1383,8 @@ public class DebatingActivity extends Activity {
             long length = currentSpeechFormat.getLength();
             String lengthStr;
             if (length % 60 == 0)
-                lengthStr = String.format(getString(R.string.timeInMinutes, length / 60));
+                lengthStr = String.format(getResources().
+                        getQuantityString(R.plurals.timeInMinutes, (int) (length / 60), length / 60));
             else
                 lengthStr = secsToText(length);
 

@@ -20,15 +20,19 @@ package net.czlee.debatekeeper;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import android.annotation.TargetApi;
+import android.app.ActionBar;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
+import android.view.MenuItem;
 
 /**
  * @author Chuan-Zheng Lee
@@ -71,12 +75,27 @@ public class GlobalSettingsActivity extends PreferenceActivity {
     }
 
     //******************************************************************************************
+    // Public methods
+    //******************************************************************************************
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == android.R.id.home)
+            finish();
+        return super.onOptionsItemSelected(item);
+    }
+
+    //******************************************************************************************
     // Protected methods
     //******************************************************************************************
+    @TargetApi(11)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        addPreferencesFromResource(R.xml.global_settings);
+        addPreferencesFromResource(R.xml.overtime_bell_number_settings);
+        addPreferencesFromResource(R.xml.general_settings);
+
+        // *************************************************************************************
+        // Set up key-to-parameter maps
 
         KEY_FIRST_OVERTIME_BELL        = getString(R.string.pref_firstOvertimeBell_key);
         KEY_OVERTIME_BELL_PERIOD       = getString(R.string.pref_overtimeBellPeriod_key);
@@ -120,6 +139,9 @@ public class GlobalSettingsActivity extends PreferenceActivity {
         updateListPreferenceSummary(KEY_POI_FLASH_SCREEN_MODE);
         updateListPreferenceSummary(KEY_PREP_TIMER_COUNT_DIRECTION);
 
+        // *************************************************************************************
+        // Customise a few preferences
+
         // Set what the "Learn More" option in POIs timer category does
         getPreferenceManager().findPreference(KEY_POI_TIMER_LEARN_MORE)
             .setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
@@ -142,6 +164,13 @@ public class GlobalSettingsActivity extends PreferenceActivity {
                 return true;
             }
         });
+
+        // Set the action bar
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+            ActionBar bar = getActionBar();
+            bar.setDisplayHomeAsUpEnabled(true);
+        }
+
     }
 
     @Override
@@ -158,7 +187,7 @@ public class GlobalSettingsActivity extends PreferenceActivity {
     }
 
     //******************************************************************************************
-    // Protected methods
+    // Private methods
     //******************************************************************************************
     private void updateIntegerPreferenceSummary(String key) {
         SharedPreferences prefs             = PreferenceManager.getDefaultSharedPreferences(this);

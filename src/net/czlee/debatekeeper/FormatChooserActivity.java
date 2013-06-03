@@ -24,19 +24,24 @@ import java.util.Comparator;
 import java.util.Iterator;
 
 import org.xml.sax.Attributes;
-import org.xml.sax.ContentHandler;
-import org.xml.sax.Locator;
 import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
 
+import android.annotation.TargetApi;
+import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.Xml;
 import android.util.Xml.Encoding;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.AdapterView;
@@ -166,17 +171,7 @@ public class FormatChooserActivity extends Activity {
      * This class just looks for the string inside &lt;debateformat name="...">
      * and saves it to <code>mCurrentStyleName</code>.
      */
-    private class GetDebateFormatNameXmlContentHandler implements ContentHandler {
-
-        @Override public void characters(char[] arg0, int arg1, int arg2) throws SAXException {}
-        @Override public void endDocument() throws SAXException {}
-        @Override public void endElement(String arg0, String arg1, String arg2) throws SAXException {}
-        @Override public void endPrefixMapping(String prefix) throws SAXException {}
-        @Override public void ignorableWhitespace(char[] ch, int start, int length) throws SAXException {}
-        @Override public void processingInstruction(String target, String data) throws SAXException {}
-        @Override public void setDocumentLocator(Locator locator) {}
-        @Override public void skippedEntity(String name) throws SAXException {}
-        @Override public void startPrefixMapping(String prefix, String uri) throws SAXException {}
+    private class GetDebateFormatNameXmlContentHandler extends DefaultHandler {
 
         @Override
         public void startDocument() throws SAXException {
@@ -191,9 +186,9 @@ public class FormatChooserActivity extends Activity {
             if (!uri.equals(DEBATING_TIMER_URI))
                 return;
 
-            if (localName.equals(getString(R.string.xmlElemName_root))) {
+            if (localName.equals(getString(R.string.xml1elemName_root))) {
                 mCurrentStyleName = atts.getValue(DEBATING_TIMER_URI,
-                        getString(R.string.xmlAttrName_root_name));
+                        getString(R.string.xml1attrName_root_name));
                 throw new AllInformationFoundException();
                 // We don't need to parse any more once we find the style name
             }
@@ -204,19 +199,7 @@ public class FormatChooserActivity extends Activity {
     private class OKButtonOnClickListener implements OnClickListener {
         @Override
         public void onClick(View v) {
-            int selectedPosition = mStylesListView.getCheckedItemPosition();
-            if (selectedPosition == getIncomingSelection()) {
-                Toast.makeText(FormatChooserActivity.this,
-                        R.string.formatChooser_toast_formatUnchanged, Toast.LENGTH_SHORT)
-                        .show();
-                FormatChooserActivity.this.finish();
-            } else if (selectedPosition != ListView.INVALID_POSITION) {
-                returnSelectionByPosition(selectedPosition);
-            } else {
-                Toast.makeText(FormatChooserActivity.this, R.string.formatChooser_toast_noSelection,
-                        Toast.LENGTH_SHORT).show();
-                FormatChooserActivity.this.finish();
-            }
+            confirmSelectionAndReturn();
         }
     }
 
@@ -250,9 +233,39 @@ public class FormatChooserActivity extends Activity {
     }
 
     //******************************************************************************************
+    // Public methods
+    //******************************************************************************************
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // We only show these buttons if there is an action bar.  In Gingerbread and earlier,
+        // we show dedicated OK/Cancel buttons.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+            MenuInflater inflater = getMenuInflater();
+            inflater.inflate(R.menu.format_chooser_action_bar, menu);
+            return true;
+        }
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+        case android.R.id.home:
+        case R.id.formatChooser_actionBar_cancel:
+            finish();
+            break;
+        case R.id.formatChooser_actionBar_ok:
+            confirmSelectionAndReturn();
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    //******************************************************************************************
     // Protected methods
     //******************************************************************************************
 
+    @TargetApi(11)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -261,11 +274,18 @@ public class FormatChooserActivity extends Activity {
 
         mFilesManager = new FormatXmlFilesManager(this);
 
+        // Set the action bar
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+            ActionBar bar = getActionBar();
+            bar.setDisplayHomeAsUpEnabled(true);
+        }
+
         // Set OnClickListeners
-        ((Button) findViewById(R.id.formatChooser_okButton))
-                .setOnClickListener(new OKButtonOnClickListener());
-        ((Button) findViewById(R.id.formatChooser_cancelButton))
-                .setOnClickListener(new CancelButtonOnClickListener());
+        // These buttons only exist in layouts for versions Gingerbread and older
+        Button okButton = (Button) findViewById(R.id.formatChooser_okButton);
+        if (okButton != null) okButton.setOnClickListener(new OKButtonOnClickListener());
+        Button cancelButton = (Button) findViewById(R.id.formatChooser_cancelButton);
+        if (cancelButton != null) cancelButton.setOnClickListener(new CancelButtonOnClickListener());
 
         // Populate mStylesList
         try {
@@ -361,6 +381,25 @@ public class FormatChooserActivity extends Activity {
      */
     private void addStyleToList(String filename, String styleName) {
         mStylesList.add(new DebateFormatListEntry(filename, styleName));
+    }
+
+    /**
+     * Confirms and handles the selection appropriately, and ends the Activity.
+     */
+    private void confirmSelectionAndReturn() {
+        int selectedPosition = mStylesListView.getCheckedItemPosition();
+        if (selectedPosition == getIncomingSelection()) {
+            Toast.makeText(FormatChooserActivity.this,
+                    R.string.formatChooser_toast_formatUnchanged, Toast.LENGTH_SHORT)
+                    .show();
+            FormatChooserActivity.this.finish();
+        } else if (selectedPosition != ListView.INVALID_POSITION) {
+            returnSelectionByPosition(selectedPosition);
+        } else {
+            Toast.makeText(FormatChooserActivity.this, R.string.formatChooser_toast_noSelection,
+                    Toast.LENGTH_SHORT).show();
+            FormatChooserActivity.this.finish();
+        }
     }
 
     /**
@@ -499,7 +538,7 @@ public class FormatChooserActivity extends Activity {
     private DebateFormatInfo getDebateFormatInfo(String filename) throws IOException, SAXException {
         InputStream is;
         is = mFilesManager.open(filename);
-        DebateFormatInfoExtractor dfie = new DebateFormatInfoExtractor(this);
+        DebateFormatInfoExtractorForSchema1 dfie = new DebateFormatInfoExtractorForSchema1(this);
         return dfie.getDebateFormatInfo(is);
     }
 

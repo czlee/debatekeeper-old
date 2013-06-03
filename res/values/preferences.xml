@@ -1,4 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+ * Copyright (C) 2012 Chuan-Zheng Lee
+ *
+ * This file is part of the Debatekeeper app, which is licensed under the
+ * GNU General Public Licence version 3 (GPLv3).  You can redistribute
+ * and/or modify it under the terms of the GPLv3, and you must not use
+ * this file except in compliance with the GPLv3.
+ *
+ * This app is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public Licence for more details.
+ *
+ * You should have received a copy of the GNU General Public Licence
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
 <resources>
 
     <!-- Keys -->
@@ -13,10 +29,10 @@
     <string name="pref_backgroundColourArea_key">backgroundColourArea</string>
     <string name="pref_keepScreenOn_key">keepScreenOn</string>
     <string name="pref_poiTimer_enable_key">poiTimerEnable</string>
-    <string name="pref_poiTimer_buzzerEnable_key">poiTimer_buzzerEnable</string>
-    <string name="pref_poiTimer_vibrateEnable_key">poiTimer_vibrateEnable</string>
-    <string name="pref_poiTimer_flashScreenMode_key">poiTimer_flashScreenMode</string>
-    <string name="pref_poiTimer_learnMore_key">poiTimer_learnMore</string>
+    <string name="pref_poiTimer_buzzerEnable_key">poiBuzzerEnable</string>
+    <string name="pref_poiTimer_vibrateEnable_key">poiVibrateEnable</string>
+    <string name="pref_poiTimer_flashScreenMode_key">poiFlashScreenMode</string>
+    <string name="pref_poiTimer_learnMore_key">poiLearnMore</string>
     <string name="pref_prepTimer_enable_key">prepTimerEnable</string>
     <string name="pref_prepTimer_countDirection_key">prepTimerCountDirection</string>
     <string name="pref_prepTimer_keepScreenOn_key">prepTimerKeepScreenOn</string>
@@ -102,7 +118,7 @@
     <!-- Background colour -->
     <string name="pref_backgroundColourArea_title">Background colour area</string>
     <string-array name="pref_backgroundColourArea_summaries">
-        <item>Don\'t use colour to indicate periods within speeches</item>
+        <item>Leave background black for whole debate</item>
         <item>Colour top bar only to indicate periods within speeches</item>
         <item>Colour whole screen to indicate periods within speeches</item>
     </string-array>
@@ -138,7 +154,7 @@
 
     <string name="pref_prepTimer_keepScreenOn_onSummary">Keep screen on (dimmed) while prep timer is running</string>
     <string name="pref_prepTimer_keepScreenOn_offSummary">Apply normal screen timeout during prep time</string>
-    <bool   name="prefDefault_prepTimer_keepScreenOn">true</bool>
+    <bool   name="prefDefault_prepTimer_keepScreenOn">false</bool>
 
     <string name="pref_prepTimer_bells_title">Prep timer bells</string>
     <string name="pref_prepTimer_bells_summary">Edit bells used during preparation time</string>
