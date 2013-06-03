@@ -47,7 +47,10 @@
     <string name="mainScreen_bellsList_nextOvertimeBell">"; next overtime bell at %1$s"</string>
     <string name="mainScreen_bellsList_noOvertimeBells">"; no overtime bells"</string>
 
-    <string name="timeInMinutes">%d minutes</string>
+    <plurals name="timeInMinutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
     <string name="speechLength">%s long</string>
     <string name="prepTimeLength">%s allowed</string>
     <string name="prepTimeControlledIndicator">", controlled"</string>
@@ -59,6 +62,9 @@
     <string name="mainScreen_noDebateLoaded_buttonText">Choose style</string>
     
     <string name="prepTime_title">Preparation time</string>
+    
+    <string name="mainScreen_toast_editTextDiscardChangesInfo_limitedBelow">To discard changes, press the back button. (You can\'t set the time to an overtime value.)</string>
+    <string name="mainScreen_toast_editTextDiscardChangesInfo_limitedAbove">To discard changes, press the back button. (You can\'t set the time to greater than 23:59.)</string>
 
     <!-- Menu -->
     <string name="mainScreen_menuItem_resetDebate">Reset debate</string>
